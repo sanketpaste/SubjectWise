@@ -11,7 +11,7 @@ import AddQuestionScreen from './src/screens/AddQuestionScreen'
 const Stack =  createNativeStackNavigator();
 
 const App =()=>{
-
+  
   return(
    <>
     <Provider store={store}>
