@@ -26,6 +26,22 @@ export const updateQuestionAsync = createAsyncThunk(
   }
 );
 
+export const addAnswerAsync = createAsyncThunk(
+  'questions/addAnswer',
+  async ({ subjectId, questionId, answer }) => {
+    await delay(150);
+    return { subjectId, questionId, answer };
+  }
+);
+
+export const addVideoAsync = createAsyncThunk(
+  'questions/addVideo',
+  async ({ subjectId, questionId, video }) => {
+    await delay(150);
+    return { subjectId, questionId, video };
+  }
+);
+
 const slice = createSlice({
   name: 'questions',
   initialState: {
@@ -73,6 +89,8 @@ const slice = createSlice({
           id: Date.now().toString(),
           text: question,
           timestamp: new Date().toISOString(),
+          answers: [],
+          videos: [],
         });
       })
       .addCase(addQuestionAsync.rejected, (state) => {
@@ -91,6 +109,57 @@ const slice = createSlice({
       })
       .addCase(updateQuestionAsync.rejected, (state) => {
         state.error = 'Failed to update';
+      })
+
+      .addCase(addAnswerAsync.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(addAnswerAsync.fulfilled, (state, action) => {
+        const { subjectId, questionId, answer } = action.payload;
+        const list = state.bySubject[subjectId] || [];
+        state.bySubject[subjectId] = list.map(q => {
+          if (q.id === questionId) {
+            return {
+              ...q,
+              answers: [...(q.answers || []), {
+                id: Date.now().toString(),
+                text: answer,
+                timestamp: new Date().toISOString(),
+              }]
+            };
+          }
+          return q;
+        });
+      })
+      .addCase(addAnswerAsync.rejected, (state) => {
+        state.error = 'Failed to add answer';
+      })
+
+      .addCase(addVideoAsync.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(addVideoAsync.fulfilled, (state, action) => {
+        const { subjectId, questionId, video } = action.payload;
+        const list = state.bySubject[subjectId] || [];
+        state.bySubject[subjectId] = list.map(q => {
+          if (q.id === questionId) {
+            return {
+              ...q,
+              videos: [...(q.videos || []), {
+                id: Date.now().toString(),
+                uri: video.uri,
+                fileName: video.fileName,
+                fileSize: video.fileSize,
+                type: video.type,
+                timestamp: new Date().toISOString(),
+              }]
+            };
+          }
+          return q;
+        });
+      })
+      .addCase(addVideoAsync.rejected, (state) => {
+        state.error = 'Failed to add video';
       });
   },
 });

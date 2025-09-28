@@ -29,23 +29,39 @@ const QuestionScreen = ({ navigation, route }) => {
   };
 
   const renderQuestion = ({ item }) => (
-    <View style={styles.questionItem}>
-      <Text style={styles.questionText}>{item.text}</Text>
+    <TouchableOpacity 
+      style={styles.questionItem}
+      onPress={() => navigation.navigate('QuestionDetails', { subjectId: current, questionId: item.id })}
+    >
+      <View style={styles.questionContent}>
+        <Text style={styles.questionText}>{item.text}</Text>
+        {item.answers && item.answers.length > 0 && (
+          <Text style={styles.answerCount}>
+            {item.answers.length} answer{item.answers.length !== 1 ? 's' : ''}
+          </Text>
+        )}
+      </View>
       <View style={styles.actions}>
         <TouchableOpacity 
           style={styles.editButton}
-          onPress={() => navigation.navigate('AddQuestion', { subjectId: current, questionId: item.id, initialText: item.text })}
+          onPress={(e) => {
+            e.stopPropagation()
+            navigation.navigate('AddQuestion', { subjectId: current, questionId: item.id, initialText: item.text })
+          }}
         >
           <Text style={styles.actionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.deleteButton}
-          onPress={() => handleDeleteQuestion(item.id)}
+          onPress={(e) => {
+            e.stopPropagation()
+            handleDeleteQuestion(item.id)
+          }}
         >
           <Text style={styles.actionText}>Delete</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -115,11 +131,19 @@ const styles = StyleSheet.create({
     shadowRadius: 2.22,
     elevation: 3,
   },
-  questionText: {
+  questionContent: {
     flex: 1,
+    marginRight: 12,
+  },
+  questionText: {
     fontSize: 16,
     color: '#333',
-    marginRight: 12,
+    marginBottom: 4,
+  },
+  answerCount: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
   actions: {
     flexDirection: 'row',

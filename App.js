@@ -5,6 +5,7 @@ import store from './src/redux/Store'
 import Dashboard  from './src/screens/Dashboard'
 import QuestionScreen from './src/screens/QuestionScreen'
 import AddQuestionScreen from './src/screens/AddQuestionScreen'
+import QuestionDetailsScreen from './src/screens/QuestionDetailsScreen'
 
 
 
@@ -20,6 +21,7 @@ const App =()=>{
           <Stack.Screen name='Dashboard' component={Dashboard}/>
           <Stack.Screen name="QuestionScreen" component={QuestionScreen}/>
           <Stack.Screen name="AddQuestion" component={AddQuestionScreen} options={{ title: 'Add Question' }}/>
+          <Stack.Screen name="QuestionDetails" component={QuestionDetailsScreen} options={{ title: 'Question Details' }}/>
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>
