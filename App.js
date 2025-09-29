@@ -21,7 +21,11 @@ const App =()=>{
           <Stack.Screen name='Dashboard' component={Dashboard}/>
           <Stack.Screen name="QuestionScreen" component={QuestionScreen}/>
           <Stack.Screen name="AddQuestion" component={AddQuestionScreen} options={{ title: 'Add Question' }}/>
-          <Stack.Screen name="QuestionDetails" component={QuestionDetailsScreen} options={{ title: 'Question Details' }}/>
+          <Stack.Screen 
+            name="QuestionDetails" 
+            component={QuestionDetailsScreen} 
+            options={{ title: 'Question Details', headerBackVisible: false }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </Provider>

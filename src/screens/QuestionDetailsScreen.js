@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native'
 import { useSelector } from 'react-redux'
-import { addAnswerAsync } from '../redux/QuestionSlice'
+import { addAnswerAsync, updateAnswerAsync, deleteAnswer } from '../redux/QuestionSlice'
 import store from '../redux/Store'
 import { useState } from 'react'
 import { TextInput, Button } from 'react-native'
@@ -12,7 +12,7 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
   const { subjectId, questionId } = route.params || {}
   const { bySubject } = useSelector(state => state.questions)
   const [answerText, setAnswerText] = useState('')
-  const [showAddAnswer, setShowAddAnswer] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   const subjectNames = {
     '1': 'React Native',
@@ -26,7 +26,7 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
     ? bySubject[subjectId].find(q => q.id === questionId) 
     : null
 
-  const handleAddAnswer = () => {
+  const handleSaveAnswer = () => {
     if (answerText.trim() === '') {
       Alert.alert('Error', 'Please enter an answer')
       return
@@ -37,10 +37,16 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
       return
     }
 
-    store.dispatch(addAnswerAsync({ subjectId, questionId, answer: answerText.trim() }))
+    const existing = currentQuestion?.answers && currentQuestion.answers[0]
+    if (!existing) {
+      Alert.alert('Not Allowed', 'You can only edit an existing answer on this screen.')
+      return
+    }
+
+    store.dispatch(updateAnswerAsync({ subjectId, questionId, answerId: existing.id, answer: answerText.trim() }))
+    Alert.alert('Success', 'Answer updated successfully!')
     setAnswerText('')
-    setShowAddAnswer(false)
-    Alert.alert('Success', 'Answer added successfully!')
+    setIsEditing(false)
   }
 
   if (!currentQuestion) {
@@ -64,12 +70,6 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
         <Text style={styles.headerText}>
           Question Details - {subjectId ? subjectNames[subjectId] : 'Unknown Subject'}
         </Text>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
       </View>
       
       <ScrollView style={styles.content}>
@@ -77,6 +77,66 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.questionLabel}>Question:</Text>
           <Text style={styles.questionText}>{currentQuestion.text}</Text>
         </View>
+
+        {currentQuestion.answers && currentQuestion.answers[0] && (
+          <View style={styles.questionContainer}>
+            {isEditing ? (
+              <View style={styles.addAnswerContainer}>
+                <Text style={styles.questionLabel}>Answer:</Text>
+                <TextInput
+                  style={styles.answerInput}
+                  value={answerText}
+                  onChangeText={setAnswerText}
+                  placeholder="Type your answer here..."
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+                <View style={styles.addAnswerActions}>
+                  <Button
+                    title={'Save'}
+                    onPress={handleSaveAnswer}
+                    color="#34C759"
+                  />
+                  <Button
+                    title="Cancel"
+                    onPress={() => {
+                      setIsEditing(false)
+                      setAnswerText('')
+                    }}
+                    color="#FF3B30"
+                  />
+                </View>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.questionLabel}>Answer:</Text>
+                <Text style={styles.questionText}>{currentQuestion.answers[0].text}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={{ marginRight: 12 }}
+                    onPress={() => {
+                      setIsEditing(true)
+                      setAnswerText(currentQuestion.answers[0].text)
+                    }}
+                  >
+                    <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert('Delete Answer', 'Are you sure?', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => store.dispatch(deleteAnswer({ subjectId, questionId })) }
+                      ])
+                    }}
+                  >
+                    <Text style={{ color: '#FF3B30', fontWeight: 'bold' }}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
 
         {currentQuestion.videos && currentQuestion.videos.length > 0 && (
           <View style={styles.videosSection}>
@@ -90,6 +150,7 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
                     source={{ uri: video.uri }}
                     style={styles.videoPlayer}
                     controls={true}
+                    paused={true}
                     resizeMode="contain"
                     onError={(error) => {
                       console.log('Video playback error:', error);
@@ -105,68 +166,10 @@ const QuestionDetailsScreen = ({ navigation, route }) => {
                     </Text>
                   </View>
                 )}
-                <Text style={styles.videoFileName}>{video.fileName}</Text>
               </View>
             ))}
           </View>
         )}
-
-        <View style={styles.answersSection}>
-          <View style={styles.answersHeader}>
-            <Text style={styles.answersLabel}>
-              Answers ({currentQuestion.answers ? currentQuestion.answers.length : 0})
-            </Text>
-            <TouchableOpacity 
-              style={styles.addAnswerButton}
-              onPress={() => setShowAddAnswer(!showAddAnswer)}
-            >
-              <Text style={styles.addAnswerButtonText}>
-                {showAddAnswer ? 'Cancel' : '+ Add Answer'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {showAddAnswer && (
-            <View style={styles.addAnswerContainer}>
-              <TextInput
-                style={styles.answerInput}
-                value={answerText}
-                onChangeText={setAnswerText}
-                placeholder="Type your answer here..."
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-              <View style={styles.addAnswerActions}>
-                <Button
-                  title="Add Answer"
-                  onPress={handleAddAnswer}
-                  color="#34C759"
-                />
-                <Button
-                  title="Cancel"
-                  onPress={() => {
-                    setShowAddAnswer(false)
-                    setAnswerText('')
-                  }}
-                  color="#FF3B30"
-                />
-              </View>
-            </View>
-          )}
-
-          {currentQuestion.answers && currentQuestion.answers.length > 0 ? (
-            currentQuestion.answers.map((answer, index) => (
-              <View key={answer.id} style={styles.answerItem}>
-                <Text style={styles.answerText}>{answer.text}</Text>
-              </View>
-            ))
-          ) : (
-            <View style={styles.noAnswersContainer}>
-              <Text style={styles.noAnswersText}>No answers yet. Be the first to answer!</Text>
-            </View>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   )
@@ -319,22 +322,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   addAnswerContainer: {
-    backgroundColor: '#f8f8f8',
-    padding: 12,
-    borderRadius: 8,
+    padding: 0,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   answerInput: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    padding: 0,
     fontSize: 16,
     minHeight: 80,
-    marginBottom: 12,
   },
   addAnswerActions: {
     flexDirection: 'row',
@@ -378,3 +372,4 @@ const styles = StyleSheet.create({
 })
 
 export default QuestionDetailsScreen
+

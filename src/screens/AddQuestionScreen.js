@@ -1,4 +1,4 @@
-import { Text, View, TextInput, Button, StyleSheet, SafeAreaView, Alert, ScrollView, TouchableOpacity, Platform, PermissionsAndroid } from "react-native"
+import { Text, View, TextInput, Button, StyleSheet, SafeAreaView, Alert, ScrollView, TouchableOpacity, Platform, PermissionsAndroid, Modal } from "react-native"
 import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { addQuestionAsync, updateQuestionAsync, addAnswerAsync, addVideoAsync } from '../redux/QuestionSlice'
@@ -10,6 +10,7 @@ import { launchImageLibrary, launchCamera } from 'react-native-image-picker'
 const AddQuestionScreen = ({ navigation, route }) => {
   const [questionText, setQuestionText] = useState('')
   const [answerText, setAnswerText] = useState('')
+  const [isAnswerModalVisible, setIsAnswerModalVisible] = useState(false)
   const { subjectId, questionId, initialText } = route.params || {}
   const { bySubject } = useSelector(state => state.questions)
 
@@ -40,14 +41,14 @@ const AddQuestionScreen = ({ navigation, route }) => {
 
     if (questionId) {
       store.dispatch(updateQuestionAsync({ subjectId, questionId, question: questionText.trim() }))
+      Alert.alert('Success', 'Question updated successfully!')
     } else {
       store.dispatch(addQuestionAsync({ subjectId, question: questionText.trim() }))
+      setQuestionText('')
+      Alert.alert('Success', 'Question added successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ])
     }
-    
-    setQuestionText('')
-    Alert.alert('Success', 'Question added successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ])
   }
 
   const handleAddAnswer = () => {
@@ -61,9 +62,12 @@ const AddQuestionScreen = ({ navigation, route }) => {
       return
     }
 
+    setIsAnswerModalVisible(false)
     store.dispatch(addAnswerAsync({ subjectId, questionId, answer: answerText.trim() }))
     setAnswerText('')
-    Alert.alert('Success', 'Answer added successfully!')
+    Alert.alert('Success', 'Answer added successfully!', [
+      { text: 'OK', onPress: () => navigation.goBack() }
+    ])
   }
 
   const requestPermissions = async () => {
@@ -188,7 +192,9 @@ const AddQuestionScreen = ({ navigation, route }) => {
           type: video.type || 'video/mp4',
         }
       }))
-      Alert.alert('Success', 'Video added successfully!')
+      Alert.alert('Success', 'Video added successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ])
     } else {
       console.log('No video assets found in response');
       Alert.alert('Error', 'No video was selected')
@@ -208,7 +214,9 @@ const AddQuestionScreen = ({ navigation, route }) => {
       </View>
       
       <ScrollView style={styles.content}>
-        <Text style={styles.label}>Enter your question:</Text>
+        {!questionId && (
+          <Text style={styles.label}>Enter your question:</Text>
+        )}
         <TextInput
           style={styles.textInput}
           value={questionText}
@@ -228,28 +236,13 @@ const AddQuestionScreen = ({ navigation, route }) => {
         </View>
 
         {questionId && (
-          <>
-            <View style={styles.separator} />
-            <Text style={styles.label}>Add an answer:</Text>
-            <TextInput
-              style={styles.textInput}
-              value={answerText}
-              onChangeText={setAnswerText}
-              placeholder="Type your answer here..."
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Add Answer"
+              onPress={() => setIsAnswerModalVisible(true)}
+              color="#34C759"
             />
-            
-            <View style={styles.buttonContainer}>
-              <Button
-                title="Add Answer"
-                onPress={handleAddAnswer}
-                color="#34C759"
-              />
-            </View>
-
-          </>
+          </View>
         )}
         
         {questionId && (
@@ -266,19 +259,37 @@ const AddQuestionScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
             
-            <View style={styles.buttonContainer}>
-              <Button
-                title="Test Video Recording"
-                onPress={() => {
-                  console.log('Test button pressed');
-                  Alert.alert('Test', 'Button is working! Video recording should work now.');
-                }}
-                color="#007AFF"
-              />
-            </View>
+            
           </>
         )}
       </ScrollView>
+      {questionId && (
+        <Modal
+          visible={isAnswerModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setIsAnswerModalVisible(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Add Answer</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={answerText}
+                onChangeText={setAnswerText}
+                placeholder="Type your answer here..."
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Button title="Cancel" onPress={() => setIsAnswerModalVisible(false)} color="#FF3B30" />
+                <Button title="Add" onPress={handleAddAnswer} color="#34C759" />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   )
 }
@@ -326,6 +337,40 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#e0e0e0',
     marginVertical: 16,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  modalInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 100,
+    marginBottom: 16,
   },
   recordVideoButton: {
     backgroundColor: '#FF6B35',

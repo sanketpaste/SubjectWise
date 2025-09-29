@@ -34,6 +34,14 @@ export const addAnswerAsync = createAsyncThunk(
   }
 );
 
+export const updateAnswerAsync = createAsyncThunk(
+  'questions/updateAnswer',
+  async ({ subjectId, questionId, answerId, answer }) => {
+    await delay(150);
+    return { subjectId, questionId, answerId, answer };
+  }
+);
+
 export const addVideoAsync = createAsyncThunk(
   'questions/addVideo',
   async ({ subjectId, questionId, video }) => {
@@ -61,6 +69,16 @@ const slice = createSlice({
           q => q.id !== questionId
         );
       }
+    },
+    deleteAnswer: (state, action) => {
+      const { subjectId, questionId } = action.payload;
+      const list = state.bySubject[subjectId] || [];
+      state.bySubject[subjectId] = list.map(q => {
+        if (q.id === questionId) {
+          return { ...q, answers: [] };
+        }
+        return q;
+      });
     },
   },
   extraReducers: (builder) => {
@@ -119,13 +137,32 @@ const slice = createSlice({
         const list = state.bySubject[subjectId] || [];
         state.bySubject[subjectId] = list.map(q => {
           if (q.id === questionId) {
+            // Enforce single answer: replace existing if present
+            const newAnswer = {
+              id: (q.answers && q.answers[0] && q.answers[0].id) || Date.now().toString(),
+              text: answer,
+              timestamp: new Date().toISOString(),
+            };
             return {
               ...q,
-              answers: [...(q.answers || []), {
-                id: Date.now().toString(),
-                text: answer,
-                timestamp: new Date().toISOString(),
-              }]
+              answers: [newAnswer],
+            };
+          }
+          return q;
+        });
+      })
+      .addCase(updateAnswerAsync.fulfilled, (state, action) => {
+        const { subjectId, questionId, answerId, answer } = action.payload;
+        const list = state.bySubject[subjectId] || [];
+        state.bySubject[subjectId] = list.map(q => {
+          if (q.id === questionId) {
+            const existing = (q.answers && q.answers[0]) ? q.answers[0] : null;
+            if (!existing) {
+              return { ...q, answers: [{ id: answerId || Date.now().toString(), text: answer, timestamp: new Date().toISOString() }] };
+            }
+            return {
+              ...q,
+              answers: [{ ...existing, id: answerId || existing.id, text: answer, timestamp: new Date().toISOString() }],
             };
           }
           return q;
@@ -164,6 +201,6 @@ const slice = createSlice({
   },
 });
 
-export const { setSubject, deleteQuestion } = slice.actions;
+export const { setSubject, deleteQuestion, deleteAnswer } = slice.actions;
 export default slice.reducer;
 export { slice as questionsSlice };
